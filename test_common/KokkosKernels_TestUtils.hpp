@@ -708,5 +708,62 @@ void shuffleMatrixEntries(Rowptrs rowptrs, Entries entries, Values values, const
   Kokkos::deep_copy(values, valuesHost);
 }
 
+///
+/// \return true when we know how to compute peak device memory bandwidth.
+///
+template <class ExecSpace>
+bool isDevicePeakMemoryBandwidthAvailable() {
+#if defined KOKKOS_ENABLE_CUDA
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
+    return true;
+  }
+#endif
+
+#if defined KOKKOS_ENABLE_HIP
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::HIP>) {
+    return true;
+  }
+#endif
+
+#if defined KOKKOS_ENABLE_SYCL
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Experimental::SYCL>) {
+    return false;  // it should be possible though
+  }
+#endif
+
+  return false;
+}
+
+///
+/// \return device peak memory bandwidth in GBytes per seconds.
+///
+template <class ExecSpace>
+auto getDevicePeakMemoryBandwidth() {
+#if defined KOKKOS_ENABLE_CUDA
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
+    const auto clock_rate = Kokkos::Cuda{}.cuda_device_prop().memoryClockRate / 1e6;  // in gigahertz
+    const auto bus_width  = Kokkos::Cuda{}.cuda_device_prop().memoryBusWidth / 8;     // in bytes
+    return 2.0 * clock_rate * bus_width;
+  }
+#endif
+
+#if defined KOKKOS_ENABLE_HIP
+  if constexpr (std::is_same_v<ExecSpace, Kokkos::HIP>) {
+    const auto clock_rate = Kokkos::HIP{}.hip_device_prop().memoryClockRate / 1e6;  // in gigahertz
+    const auto bus_width  = Kokkos::HIP{}.hip_device_prop().memoryBusWidth / 8;     // in bytes
+    return 2.0 * clock_rate * bus_width;
+  }
+#endif
+
+#if defined KOKKOS_ENABLE_SYCL
+  // auto device           = Kokkos::Experimental::SYCL{}.sycl_queue().get_device();
+  // const auto clock_rate = device.get_info<sycl::info::device::max_clock_frequency>() / 1e3;  // in gigahertz
+  // const auto bus_width  = ??? // not found an easy way to get this value for a sycl device.
+  return 0.0;
+#endif
+
+  return 0.0;
+}
+
 }  // namespace Test
 #endif

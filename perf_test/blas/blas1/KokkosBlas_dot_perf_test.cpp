@@ -149,6 +149,12 @@ void run(int m, int repeat) {
   size_t flopsPerRun = (size_t)2 * m;
   printf("Avg DOT time: %f s.\n", avg);
   printf("Avg DOT FLOP/s: %.3e\n", flopsPerRun / avg);
+  if (Test::isDevicePeakMemoryBandwidthAvailable<ExecSpace>()) {
+    printf("Avg DOT BandWidth: %.3f GBytes/s - Peak device BandWidth %.3f GBytes/s\n",
+           2.0 * m * sizeof(Scalar) / avg * 1e-9, Test::getDevicePeakMemoryBandwidth<ExecSpace>());
+  } else {
+    printf("Avg DOT BandWidth: %.3f GBytes/s\n", 2.0 * m * sizeof(Scalar) / avg * 1e-9);
+  }
 }
 
 int main(int argc, char** argv) {
